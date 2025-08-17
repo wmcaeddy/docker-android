@@ -1,0 +1,106 @@
+worker_processes 1;
+pid /tmp/nginx.pid;
+error_log /var/log/nginx/error.log warn;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    client_body_temp_path /tmp/client_temp;
+    proxy_temp_path       /tmp/proxy_temp_path;
+    fastcgi_temp_path     /tmp/fastcgi_temp;
+    uwsgi_temp_path       /tmp/uwsgi_temp;
+    scgi_temp_path        /tmp/scgi_temp;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    keepalive_timeout 65;
+
+    # Main server listening on Railway's PORT
+    server {
+        listen ${PORT} default_server;
+        server_name _;
+
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+
+        # Root path shows information page
+        location = / {
+            default_type text/html;
+            return 200 '<html>
+<head><title>Docker Android on Railway</title></head>
+<body>
+<h1>Docker Android Emulator</h1>
+<p>Available endpoints:</p>
+<ul>
+<li><a href="/vnc/">VNC Web Interface</a> - View and control the Android emulator</li>
+<li><a href="/adb">ADB WebSocket</a> - Connect via ADB (WebSocket proxy)</li>
+<li><a href="/health">Health Check</a> - Service status</li>
+</ul>
+<p>Note: Direct ADB connections are not supported on Railway. Use the WebSocket proxy instead.</p>
+</body>
+</html>';
+        }
+
+        # VNC Web Interface (noVNC)
+        location /vnc/ {
+            proxy_pass http://localhost:6080/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 86400;
+        }
+
+        # WebSocket for VNC
+        location /websockify {
+            proxy_pass http://localhost:6080/websockify;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 86400;
+        }
+
+        # ADB WebSocket proxy endpoint
+        location /adb {
+            proxy_pass http://localhost:5555;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 86400;
+        }
+
+        # Logs endpoint (optional)
+        location /logs {
+            proxy_pass http://localhost:9000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
