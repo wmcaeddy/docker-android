@@ -41,11 +41,12 @@ This guide will help you deploy your Docker-Android application to Railway with 
 3. **Configure Environment Variables**
    - In Railway dashboard, go to your project
    - Click on "Variables" tab
-   - Add the following variables:
+   - Add the following REQUIRED variables:
      ```
      EMULATOR_DEVICE=Samsung Galaxy S10
      WEB_VNC=true
      EMULATOR_NO_BOOT_ANIM=true
+     EMULATOR_ADDITIONAL_ARGS=-gpu swiftshader_indirect -no-audio -no-boot-anim
      ```
 
 ### Option 2: Deploy via Railway CLI

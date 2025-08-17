@@ -18,12 +18,23 @@ head -n 35 /tmp/nginx.conf
 /home/androidusr/docker-android/mixins/scripts/run.sh &
 EMULATOR_PID=$!
 
-# Wait a bit for emulator to start
-sleep 10
+# Wait a bit for emulator to start initializing
+sleep 20
 
 # Start nginx
 /usr/sbin/nginx -c /tmp/nginx.conf -g "daemon off;" &
 NGINX_PID=$!
+
+# Show emulator status
+echo "Checking emulator status..."
+for i in {1..10}; do
+    if [ -f /home/androidusr/device_status ]; then
+        echo "Device status: $(cat /home/androidusr/device_status)"
+        break
+    fi
+    echo "Waiting for device status file... ($i/10)"
+    sleep 5
+done
 
 # Function to handle shutdown
 cleanup() {
