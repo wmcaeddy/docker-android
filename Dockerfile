@@ -28,9 +28,6 @@ RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run /tmp/nginx /tmp/supervisor
 
 USER 1300:1301
 
-# Create volume mount point for Railway
-VOLUME ["/app/data"]
-
 # Railway will set PORT env variable
 EXPOSE ${PORT:-8080}
 
