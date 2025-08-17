@@ -8,15 +8,17 @@ echo "Starting Docker Android on Railway with PORT=$PORT"
 envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /tmp/nginx.conf
 
 # Create required directories
-mkdir -p /tmp/nginx /var/log/supervisor
+mkdir -p /tmp/nginx /tmp/supervisor
 
 # Create supervisord config
 cat > /tmp/supervisord.conf << EOF
 [supervisord]
 nodaemon=true
 user=androidusr
-logfile=/var/log/supervisor/supervisord.log
+logfile=/tmp/supervisor/supervisord.log
 pidfile=/tmp/supervisord.pid
+directory=/tmp
+childlogdir=/tmp
 
 [program:nginx]
 command=/usr/sbin/nginx -c /tmp/nginx.conf -g "daemon off;"

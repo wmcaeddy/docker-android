@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     gettext-base \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,11 +21,15 @@ COPY nginx.conf.template /etc/nginx/nginx.conf.template
 COPY railway-start.sh /railway-start.sh
 RUN chmod +x /railway-start.sh
 
-# Create necessary directories
-RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run \
-    && chown -R 1300:1301 /var/log/nginx /var/cache/nginx /var/run /etc/nginx
+# Create necessary directories and fix permissions
+RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run /tmp/nginx /tmp/supervisor \
+    && chown -R 1300:1301 /var/log/nginx /var/cache/nginx /var/run /etc/nginx /tmp/nginx /tmp/supervisor \
+    && chmod -R 755 /tmp/nginx /tmp/supervisor
 
 USER 1300:1301
+
+# Create volume mount point for Railway
+VOLUME ["/app/data"]
 
 # Railway will set PORT env variable
 EXPOSE ${PORT:-8080}
