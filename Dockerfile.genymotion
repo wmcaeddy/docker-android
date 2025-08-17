@@ -1,0 +1,29 @@
+FROM budtmo/docker-android:genymotion
+
+USER root
+
+# Install nginx for Railway port routing
+RUN apt-get update && apt-get install -y \
+    nginx \
+    gettext-base \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy configuration files
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+COPY railway-genymotion.sh /railway-start.sh
+RUN chmod +x /railway-start.sh
+
+# Create necessary directories
+RUN mkdir -p /tmp/nginx \
+    && chown -R 1000:1000 /tmp/nginx
+
+USER 1000:1000
+
+EXPOSE ${PORT:-8080}
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=300s --retries=10 \
+  CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
+
+CMD ["/railway-start.sh"]
