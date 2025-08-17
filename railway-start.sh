@@ -4,48 +4,40 @@
 export PORT=${PORT:-8080}
 echo "Starting Docker Android on Railway with PORT=$PORT"
 
-# Generate nginx config from template
-envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /tmp/nginx.conf
-
 # Create required directories
 mkdir -p /tmp/nginx /tmp/supervisor
 
-# Create supervisord config
-cat > /tmp/supervisord.conf << EOF
-[supervisord]
-nodaemon=true
-user=androidusr
-logfile=/tmp/supervisor/supervisord.log
-pidfile=/tmp/supervisord.pid
-directory=/tmp
-childlogdir=/tmp
+# Generate nginx config from template - replace PORT placeholder
+sed "s/\${PORT}/$PORT/g" /etc/nginx/nginx.conf.template > /tmp/nginx.conf
 
-[program:nginx]
-command=/usr/sbin/nginx -c /tmp/nginx.conf -g "daemon off;"
-priority=10
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-autorestart=true
+# Debug: Show the generated config
+echo "Generated nginx config:"
+head -n 35 /tmp/nginx.conf
 
-[program:emulator]
-command=/home/androidusr/docker-android/mixins/scripts/run.sh
-priority=20
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-autorestart=true
-environment=DISPLAY=":0"
+# Start the original emulator script in background
+/home/androidusr/docker-android/mixins/scripts/run.sh &
+EMULATOR_PID=$!
 
-[program:wait_for_boot]
-command=/bin/bash -c 'sleep 30 && echo "Emulator boot wait complete"'
-priority=30
-autorestart=false
-startsecs=0
-exitcodes=0
-EOF
+# Wait a bit for emulator to start
+sleep 10
 
-# Start supervisord with our config
-exec /usr/bin/supervisord -c /tmp/supervisord.conf
+# Start nginx
+/usr/sbin/nginx -c /tmp/nginx.conf -g "daemon off;" &
+NGINX_PID=$!
+
+# Function to handle shutdown
+cleanup() {
+    echo "Shutting down..."
+    kill $NGINX_PID $EMULATOR_PID 2>/dev/null
+    wait $NGINX_PID $EMULATOR_PID
+    exit 0
+}
+
+# Set up signal handlers
+trap cleanup SIGTERM SIGINT
+
+# Wait for any process to exit
+wait -n
+
+# If we get here, something died
+cleanup

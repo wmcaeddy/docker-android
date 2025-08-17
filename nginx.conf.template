@@ -27,7 +27,7 @@ http {
 
     # Main server listening on Railway's PORT
     server {
-        listen ${PORT:-8080} default_server;
+        listen ${PORT} default_server;
         server_name _;
 
         # Health check endpoint
