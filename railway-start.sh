@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Railway provides PORT environment variable
-export PORT=${PORT:-3000}
+export PORT=${PORT:-8080}
 echo "Starting Docker Android on Railway with PORT=$PORT"
 
 # Generate nginx config from template
